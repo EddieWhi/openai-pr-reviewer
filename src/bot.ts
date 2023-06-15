@@ -1,4 +1,4 @@
-import './fetch-polyfill'
+import './fetch-polyfill.js'
 
 import {info, setFailed, warning} from '@actions/core'
 import {
@@ -9,7 +9,7 @@ import {
   // eslint-disable-next-line import/no-unresolved
 } from 'chatgpt'
 import pRetry from 'p-retry'
-import {OpenAIOptions, Options} from './options'
+import {OpenAIOptions, Options} from './options.js'
 
 // define type to save parentMessageId and conversationId
 export interface Ids {

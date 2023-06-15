@@ -1,5 +1,6 @@
 import {getInput, warning} from '@actions/core'
 import {Octokit} from '@octokit/action'
+import {Octokit as CoreOctokit} from '@octokit/core'
 import {retry} from '@octokit/plugin-retry'
 import {throttling} from '@octokit/plugin-throttling'
 
@@ -12,7 +13,7 @@ export const octokit = new RetryAndThrottlingOctokit({
     onRateLimit: (
       retryAfter: number,
       options: any,
-      _o: Octokit,
+      _o: CoreOctokit,
       retryCount: number
     ) => {
       warning(

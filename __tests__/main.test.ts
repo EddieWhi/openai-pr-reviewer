@@ -4,6 +4,7 @@ import * as path from 'path'
 import * as process from 'process'
 
 test('test runs', () => {
+  
   process.env['INPUT_ACTION'] = 'code-review'
   const np = process.execPath
   const ip = path.join(__dirname, '..', 'lib', 'main.js')
