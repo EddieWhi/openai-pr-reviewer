@@ -1,6 +1,6 @@
 import {info, warning} from '@actions/core'
 // eslint-disable-next-line camelcase
-import {context as github_context} from '@actions/github'
+import {Context} from '@actions/github/lib/context.js'
 import {type Bot} from './bot.js'
 import {
   Commenter,
@@ -14,17 +14,16 @@ import {type Options} from './options.js'
 import {type Prompts} from './prompts.js'
 import {getTokenCount} from './tokenizer.js'
 
-// eslint-disable-next-line camelcase
-const context = github_context
-const repo = context.repo
 const ASK_BOT = '@openai'
 
 export const handleReviewComment = async (
+  context: Context,
   heavyBot: Bot,
   options: Options,
   prompts: Prompts
 ) => {
-  const commenter: Commenter = new Commenter()
+  const repo = context.repo
+  const commenter: Commenter = new Commenter(context)
   const inputs: Inputs = new Inputs()
 
   if (context.eventName !== 'pull_request_review_comment') {

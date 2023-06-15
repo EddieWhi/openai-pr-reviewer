@@ -1,6 +1,6 @@
 import {error, info, warning} from '@actions/core'
 // eslint-disable-next-line camelcase
-import {context as github_context} from '@actions/github'
+import {Context} from '@actions/github/lib/context.js'
 import pLimit from 'p-limit'
 import {type Bot} from './bot.js'
 import {
@@ -18,19 +18,17 @@ import {type Options} from './options.js'
 import {type Prompts} from './prompts.js'
 import {getTokenCount} from './tokenizer.js'
 
-// eslint-disable-next-line camelcase
-const context = github_context
-const repo = context.repo
-
 const ignoreKeyword = '@openai: ignore'
 
 export const codeReview = async (
+  context: Context,
   lightBot: Bot,
   heavyBot: Bot,
   options: Options,
   prompts: Prompts
 ): Promise<void> => {
-  const commenter: Commenter = new Commenter()
+  const repo = context.repo
+  const commenter: Commenter = new Commenter(context)
 
   const openaiConcurrencyLimit = pLimit(options.openaiConcurrencyLimit)
 

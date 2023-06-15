@@ -1,11 +1,8 @@
 import {info, warning} from '@actions/core'
 // eslint-disable-next-line camelcase
-import {context as github_context} from '@actions/github'
+import {Context} from '@actions/github/lib/context.js'
 import {octokit} from './octokit.js'
 
-// eslint-disable-next-line camelcase
-const context = github_context
-const repo = context.repo
 
 export const COMMENT_GREETING = ':robot: OpenAI'
 
@@ -40,15 +37,23 @@ export const COMMIT_ID_START_TAG = '<!-- commit_ids_reviewed_start -->'
 export const COMMIT_ID_END_TAG = '<!-- commit_ids_reviewed_end -->'
 
 export class Commenter {
+  context: Context
+  repo: { owner: string; repo: string }
+  
+  constructor(context: Context) {
+    this.context = context
+    this.repo = context.repo
+  }
+
   /**
    * @param mode Can be "create", "replace". Default is "replace".
    */
   async comment(message: string, tag: string, mode: string) {
     let target: number
-    if (context.payload.pull_request != null) {
-      target = context.payload.pull_request.number
-    } else if (context.payload.issue != null) {
-      target = context.payload.issue.number
+    if (this.context.payload.pull_request != null) {
+      target = this.context.payload.pull_request.number
+    } else if (this.context.payload.issue != null) {
+      target = this.context.payload.issue.number
     } else {
       warning(
         'Skipped: context.payload.pull_request and context.payload.issue are both null'
@@ -133,8 +138,8 @@ ${tag}`
     try {
       // get latest description from PR
       const pr = await octokit.pulls.get({
-        owner: repo.owner,
-        repo: repo.repo,
+        owner: this.repo.owner,
+        repo: this.repo.repo,
         // eslint-disable-next-line camelcase
         pull_number: pullNumber
       })
@@ -151,8 +156,8 @@ ${tag}`
       )
       const newDescription = `${description}${DESCRIPTION_START_TAG}\n${messageClean}\n${DESCRIPTION_END_TAG}`
       await octokit.pulls.update({
-        owner: repo.owner,
-        repo: repo.repo,
+        owner: this.repo.owner,
+        repo: this.repo.repo,
         // eslint-disable-next-line camelcase
         pull_number: pullNumber,
         body: newDescription
@@ -211,8 +216,8 @@ ${COMMENT_TAG}`
           )
           try {
             await octokit.pulls.updateReviewComment({
-              owner: repo.owner,
-              repo: repo.repo,
+              owner: this.repo.owner,
+              repo: this.repo.repo,
               // eslint-disable-next-line camelcase
               comment_id: c.id,
               body: comment.message
@@ -230,8 +235,8 @@ ${COMMENT_TAG}`
           `Creating new review comment for ${comment.path}:${comment.startLine}-${comment.endLine}: ${comment.message}`
         )
         const commentData: any = {
-          owner: repo.owner,
-          repo: repo.repo,
+          owner: this.repo.owner,
+          repo: this.repo.repo,
           // eslint-disable-next-line camelcase
           pull_number: pullNumber,
           // eslint-disable-next-line camelcase
@@ -275,8 +280,8 @@ ${COMMENT_REPLY_TAG}
     try {
       // Post the reply to the user comment
       await octokit.pulls.createReplyForReviewComment({
-        owner: repo.owner,
-        repo: repo.repo,
+        owner: this.repo.owner,
+        repo: this.repo.repo,
         // eslint-disable-next-line camelcase
         pull_number: pullNumber,
         body: reply,
@@ -287,8 +292,8 @@ ${COMMENT_REPLY_TAG}
       warning(`Failed to reply to the top-level comment ${error}`)
       try {
         await octokit.pulls.createReplyForReviewComment({
-          owner: repo.owner,
-          repo: repo.repo,
+          owner: this.repo.owner,
+          repo: this.repo.repo,
           // eslint-disable-next-line camelcase
           pull_number: pullNumber,
           body: `Could not post the reply to the top-level comment due to the following error: ${error}`,
@@ -307,8 +312,8 @@ ${COMMENT_REPLY_TAG}
           COMMENT_REPLY_TAG
         )
         await octokit.pulls.updateReviewComment({
-          owner: repo.owner,
-          repo: repo.repo,
+          owner: this.repo.owner,
+          repo: this.repo.repo,
           // eslint-disable-next-line camelcase
           comment_id: topLevelComment.id,
           body: newBody
@@ -458,8 +463,8 @@ ${chain}
     try {
       for (;;) {
         const {data: comments} = await octokit.pulls.listReviewComments({
-          owner: repo.owner,
-          repo: repo.repo,
+          owner: this.repo.owner,
+          repo: this.repo.repo,
           // eslint-disable-next-line camelcase
           pull_number: target,
           page,
@@ -485,8 +490,8 @@ ${chain}
     try {
       // get commend ID from the response
       await octokit.issues.createComment({
-        owner: repo.owner,
-        repo: repo.repo,
+        owner: this.repo.owner,
+        repo: this.repo.repo,
         // eslint-disable-next-line camelcase
         issue_number: target,
         body
@@ -501,8 +506,8 @@ ${chain}
       const cmt = await this.findCommentWithTag(tag, target)
       if (cmt) {
         await octokit.issues.updateComment({
-          owner: repo.owner,
-          repo: repo.repo,
+          owner: this.repo.owner,
+          repo: this.repo.repo,
           // eslint-disable-next-line camelcase
           comment_id: cmt.id,
           body
@@ -543,8 +548,8 @@ ${chain}
     try {
       for (;;) {
         const {data: comments} = await octokit.issues.listComments({
-          owner: repo.owner,
-          repo: repo.repo,
+          owner: this.repo.owner,
+          repo: this.repo.repo,
           // eslint-disable-next-line camelcase
           issue_number: target,
           page,
@@ -626,13 +631,13 @@ ${chain}
     const allCommits = []
     let page = 1
     let commits
-    if (context && context.payload && context.payload.pull_request != null) {
+    if (this.context && this.context.payload && this.context.payload.pull_request != null) {
       do {
         commits = await octokit.pulls.listCommits({
-          owner: repo.owner,
-          repo: repo.repo,
+          owner: this.repo.owner,
+          repo: this.repo.repo,
           // eslint-disable-next-line camelcase
-          pull_number: context.payload.pull_request.number,
+          pull_number: this.context.payload.pull_request.number,
           // eslint-disable-next-line camelcase
           per_page: 100,
           page

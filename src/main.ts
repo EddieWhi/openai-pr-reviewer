@@ -10,6 +10,7 @@ import {OpenAIOptions, Options} from './options.js'
 import {Prompts} from './prompts.js'
 import {codeReview} from './review.js'
 import {handleReviewComment} from './review-comment.js'
+import {context} from '@actions/github'
 
 async function run(): Promise<void> {
   const options: Options = new Options(
@@ -72,11 +73,11 @@ async function run(): Promise<void> {
       process.env.GITHUB_EVENT_NAME === 'pull_request' ||
       process.env.GITHUB_EVENT_NAME === 'pull_request_target'
     ) {
-      await codeReview(lightBot, heavyBot, options, prompts)
+      await codeReview(context, lightBot, heavyBot, options, prompts)
     } else if (
       process.env.GITHUB_EVENT_NAME === 'pull_request_review_comment'
     ) {
-      await handleReviewComment(heavyBot, options, prompts)
+      await handleReviewComment(context, heavyBot, options, prompts)
     } else {
       warning('Skipped: this action only works on push events or pull_request')
     }
