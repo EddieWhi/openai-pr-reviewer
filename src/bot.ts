@@ -19,15 +19,19 @@ export interface Ids {
 
 export class Bot {
   private readonly api: ChatGPTAPI | null = null // not free
+  private readonly timeoutMs: number
+  private readonly debug: boolean
+  private readonly retries: number
 
-  private readonly options: Options
-
-  constructor(options: Options, openaiOptions: OpenAIOptions) {
-    this.options = options
+  constructor(options: OpenAIOptions) {
     if (process.env.OPENAI_API_KEY) {
+      this.timeoutMs = options.timeoutMS
+      this.debug = options.debug
+      this.retries = options.retries
+
       const currentDate = new Date().toISOString().split('T')[0]
       const systemMessage = `${options.systemMessage} 
-Knowledge cutoff: ${openaiOptions.tokenLimits.knowledgeCutOff}
+Knowledge cutoff: ${options.tokenLimits.knowledgeCutOff}
 Current date: ${currentDate}`
 
       this.api = new ChatGPTAPI({
@@ -36,11 +40,11 @@ Current date: ${currentDate}`
         apiKey: process.env.OPENAI_API_KEY,
         apiOrg: process.env.OPENAI_API_ORG ?? undefined,
         debug: options.debug,
-        maxModelTokens: openaiOptions.tokenLimits.maxTokens,
-        maxResponseTokens: openaiOptions.tokenLimits.responseTokens,
+        maxModelTokens: options.tokenLimits.maxTokens,
+        maxResponseTokens: options.tokenLimits.responseTokens,
         completionParams: {
-          temperature: options.openaiModelTemperature,
-          model: openaiOptions.model
+          temperature: options.modelTemperature,
+          model: options.model
         }
       })
     } else {
@@ -77,14 +81,14 @@ Current date: ${currentDate}`
 
     if (this.api != null) {
       const opts: SendMessageOptions = {
-        timeoutMs: this.options.openaiTimeoutMS
+        timeoutMs: this.timeoutMs
       }
       if (ids.parentMessageId) {
         opts.parentMessageId = ids.parentMessageId
       }
       try {
         response = await pRetry(() => this.api!.sendMessage(message, opts), {
-          retries: this.options.openaiRetries
+          retries: this.retries
         })
       } catch (e: unknown) {
         if (e instanceof ChatGPTError) {
@@ -113,7 +117,7 @@ Current date: ${currentDate}`
     if (responseText.startsWith('with ')) {
       responseText = responseText.substring(5)
     }
-    if (this.options.debug) {
+    if (this.debug) {
       info(`openai responses: ${responseText}`)
     }
     const newIds: Ids = {

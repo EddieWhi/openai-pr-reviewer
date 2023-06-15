@@ -1,6 +1,6 @@
 import {info, warning} from '@actions/core'
 // eslint-disable-next-line camelcase
-import {Context} from '@actions/github/lib/context.js'
+import {ReviewContext} from './review-context.js'
 import {octokit} from './octokit.js'
 
 
@@ -37,10 +37,10 @@ export const COMMIT_ID_START_TAG = '<!-- commit_ids_reviewed_start -->'
 export const COMMIT_ID_END_TAG = '<!-- commit_ids_reviewed_end -->'
 
 export class Commenter {
-  context: Context
+  context: ReviewContext
   repo: { owner: string; repo: string }
   
-  constructor(context: Context) {
+  constructor(context: ReviewContext) {
     this.context = context
     this.repo = context.repo
   }

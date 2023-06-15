@@ -1,6 +1,6 @@
 import {info, warning} from '@actions/core'
 // eslint-disable-next-line camelcase
-import {Context} from '@actions/github/lib/context.js'
+import {ReviewContext} from './review-context.js'
 import {type Bot} from './bot.js'
 import {
   Commenter,
@@ -17,7 +17,7 @@ import {getTokenCount} from './tokenizer.js'
 const ASK_BOT = '@openai'
 
 export const handleReviewComment = async (
-  context: Context,
+  context: ReviewContext,
   heavyBot: Bot,
   options: Options,
   prompts: Prompts
@@ -130,7 +130,7 @@ export const handleReviewComment = async (
       // get tokens so far
       let tokens = getTokenCount(prompts.renderComment(inputs))
 
-      if (tokens > options.heavyTokenLimits.requestTokens) {
+      if (tokens > options.openaiHeavyModel.tokenLimits.requestTokens) {
         await commenter.reviewCommentReply(
           pullNumber,
           topLevelComment,
@@ -146,7 +146,7 @@ export const handleReviewComment = async (
         if (
           fileDiffCount > 0 &&
           tokens + fileDiffTokens * fileDiffCount <=
-            options.heavyTokenLimits.requestTokens
+            options.openaiHeavyModel.tokenLimits.requestTokens
         ) {
           tokens += fileDiffTokens * fileDiffCount
           inputs.fileDiff = fileDiff
@@ -164,7 +164,7 @@ export const handleReviewComment = async (
         const shortSummaryTokens = getTokenCount(shortSummary)
         if (
           tokens + shortSummaryTokens <=
-          options.heavyTokenLimits.requestTokens
+          options.openaiHeavyModel.tokenLimits.requestTokens
         ) {
           tokens += shortSummaryTokens
           inputs.shortSummary = shortSummary

@@ -1,6 +1,5 @@
 import {error, info, warning} from '@actions/core'
 // eslint-disable-next-line camelcase
-import {Context} from '@actions/github/lib/context.js'
 import pLimit from 'p-limit'
 import {type Bot} from './bot.js'
 import {
@@ -17,11 +16,12 @@ import {octokit} from './octokit.js'
 import {type Options} from './options.js'
 import {type Prompts} from './prompts.js'
 import {getTokenCount} from './tokenizer.js'
+import { ReviewContext} from './review-context.js'
 
 const ignoreKeyword = '@openai: ignore'
 
 export const codeReview = async (
-  context: Context,
+  context: ReviewContext,
   lightBot: Bot,
   heavyBot: Bot,
   options: Options,
@@ -61,7 +61,7 @@ export const codeReview = async (
   }
 
   // as gpt-3.5-turbo isn't paying attention to system message, add to inputs for now
-  inputs.systemMessage = options.systemMessage
+  inputs.systemMessage = options.openaiLightModel.systemMessage
 
   // get SUMMARIZE_TAG message
   const existingSummarizeCmt = await commenter.findCommentWithTag(
@@ -148,7 +148,7 @@ export const codeReview = async (
   const filterSelectedFiles = []
   const filterIgnoredFiles = []
   for (const file of files) {
-    if (!options.checkPath(file.filename)) {
+    if (!options.pathFilters.check(file.filename)) {
       info(`skip for excluded path: ${file.filename}`)
       filterIgnoredFiles.push(file)
     } else {
@@ -268,7 +268,7 @@ ${hunks.oldHunk}
     )
 
     const diffTokens = getTokenCount(fileDiff)
-    if (tokens + diffTokens > options.lightTokenLimits.requestTokens) {
+    if (tokens + diffTokens > options.openaiLightModel.tokenLimits.requestTokens) {
       info(`summarize: diff tokens exceeds limit, skip ${filename}`)
       summariesFailed.push(`${filename} (diff tokens exceeds limit)`)
       return null
@@ -502,9 +502,9 @@ ${
       let patchesToPack = 0
       for (const [, , patch] of patches) {
         const patchTokens = getTokenCount(patch)
-        if (tokens + patchTokens > options.heavyTokenLimits.requestTokens) {
+        if (tokens + patchTokens > options.openaiHeavyModel.tokenLimits.requestTokens) {
           info(
-            `only packing ${patchesToPack} / ${patches.length} patches, tokens: ${tokens} / ${options.heavyTokenLimits.requestTokens}`
+            `only packing ${patchesToPack} / ${patches.length} patches, tokens: ${tokens} / ${options.openaiHeavyModel.tokenLimits.requestTokens}`
           )
           break
         }
@@ -555,7 +555,7 @@ ${
         const commentChainTokens = getTokenCount(commentChain)
         if (
           tokens + commentChainTokens >
-          options.heavyTokenLimits.requestTokens
+          options.openaiHeavyModel.tokenLimits.requestTokens
         ) {
           commentChain = ''
         } else {

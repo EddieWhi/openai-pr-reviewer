@@ -2,7 +2,7 @@ import {info} from '@actions/core'
 import {minimatch} from 'minimatch'
 import {TokenLimits} from './limits.js'
 
-export class Options {
+export interface Options {
   debug: boolean
   disableReview: boolean
   disableReleaseNotes: boolean
@@ -10,79 +10,11 @@ export class Options {
   reviewSimpleChanges: boolean
   reviewCommentLGTM: boolean
   pathFilters: PathFilter
-  systemMessage: string
-  openaiLightModel: string
-  openaiHeavyModel: string
-  openaiModelTemperature: number
-  openaiRetries: number
-  openaiTimeoutMS: number
+
+  openaiLightModel: OpenAIOptions
+  openaiHeavyModel: OpenAIOptions
+
   openaiConcurrencyLimit: number
-  lightTokenLimits: TokenLimits
-  heavyTokenLimits: TokenLimits
-  apiBaseUrl: string
-
-  constructor(
-    debug: boolean,
-    disableReview: boolean,
-    disableReleaseNotes: boolean,
-    maxFiles = '0',
-    reviewSimpleChanges = false,
-    reviewCommentLGTM = false,
-    pathFilters: string[] | null = null,
-    systemMessage = '',
-    openaiLightModel = 'gpt-3.5-turbo',
-    openaiHeavyModel = 'gpt-3.5-turbo',
-    openaiModelTemperature = '0.0',
-    openaiRetries = '3',
-    openaiTimeoutMS = '120000',
-    openaiConcurrencyLimit = '4',
-    apiBaseUrl = 'https://api.openai.com/v1'
-  ) {
-    this.debug = debug
-    this.disableReview = disableReview
-    this.disableReleaseNotes = disableReleaseNotes
-    this.maxFiles = parseInt(maxFiles)
-    this.reviewSimpleChanges = reviewSimpleChanges
-    this.reviewCommentLGTM = reviewCommentLGTM
-    this.pathFilters = new PathFilter(pathFilters)
-    this.systemMessage = systemMessage
-    this.openaiLightModel = openaiLightModel
-    this.openaiHeavyModel = openaiHeavyModel
-    this.openaiModelTemperature = parseFloat(openaiModelTemperature)
-    this.openaiRetries = parseInt(openaiRetries)
-    this.openaiTimeoutMS = parseInt(openaiTimeoutMS)
-    this.openaiConcurrencyLimit = parseInt(openaiConcurrencyLimit)
-    this.lightTokenLimits = new TokenLimits(openaiLightModel)
-    this.heavyTokenLimits = new TokenLimits(openaiHeavyModel)
-    this.apiBaseUrl = apiBaseUrl
-  }
-
-  // print all options using core.info
-  print(): void {
-    info(`debug: ${this.debug}`)
-    info(`disable_review: ${this.disableReview}`)
-    info(`disable_release_notes: ${this.disableReleaseNotes}`)
-    info(`max_files: ${this.maxFiles}`)
-    info(`review_simple_changes: ${this.reviewSimpleChanges}`)
-    info(`review_comment_lgtm: ${this.reviewCommentLGTM}`)
-    info(`path_filters: ${this.pathFilters}`)
-    info(`system_message: ${this.systemMessage}`)
-    info(`openai_light_model: ${this.openaiLightModel}`)
-    info(`openai_heavy_model: ${this.openaiHeavyModel}`)
-    info(`openai_model_temperature: ${this.openaiModelTemperature}`)
-    info(`openai_retries: ${this.openaiRetries}`)
-    info(`openai_timeout_ms: ${this.openaiTimeoutMS}`)
-    info(`openai_concurrency_limit: ${this.openaiConcurrencyLimit}`)
-    info(`summary_token_limits: ${this.lightTokenLimits.string()}`)
-    info(`review_token_limits: ${this.heavyTokenLimits.string()}`)
-    info(`api_base_url: ${this.apiBaseUrl}`)
-  }
-
-  checkPath(path: string): boolean {
-    const ok = this.pathFilters.check(path)
-    info(`checking path: ${path} => ${ok}`)
-    return ok
-  }
 }
 
 export class PathFilter {
@@ -106,6 +38,7 @@ export class PathFilter {
 
   check(path: string): boolean {
     if (this.rules.length === 0) {
+      info(`checking path: ${path}, no rules => ${true}`)
       return true
     }
 
@@ -126,20 +59,19 @@ export class PathFilter {
       }
     }
 
-    return (!inclusionRuleExists || included) && !excluded
+    const result = (!inclusionRuleExists || included) && !excluded
+    info(`checking path: ${path} => ${result}`)
+    return result
   }
 }
 
-export class OpenAIOptions {
+export interface OpenAIOptions {
   model: string
   tokenLimits: TokenLimits
-
-  constructor(model = 'gpt-3.5-turbo', tokenLimits: TokenLimits | null = null) {
-    this.model = model
-    if (tokenLimits != null) {
-      this.tokenLimits = tokenLimits
-    } else {
-      this.tokenLimits = new TokenLimits(model)
-    }
-  }
+  modelTemperature: number
+  systemMessage: string
+  retries: number
+  timeoutMS: number
+  apiBaseUrl: string
+  debug: boolean
 }

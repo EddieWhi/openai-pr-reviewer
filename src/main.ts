@@ -3,36 +3,53 @@ import {
   getInput,
   getMultilineInput,
   setFailed,
+  info,
   warning
 } from '@actions/core'
 import {Bot} from './bot.js'
-import {OpenAIOptions, Options} from './options.js'
+import {Options, PathFilter} from './options.js'
 import {Prompts} from './prompts.js'
 import {codeReview} from './review.js'
 import {handleReviewComment} from './review-comment.js'
 import {context} from '@actions/github'
+import { TokenLimits } from './limits.js'
 
 async function run(): Promise<void> {
-  const options: Options = new Options(
-    getBooleanInput('debug'),
-    getBooleanInput('disable_review'),
-    getBooleanInput('disable_release_notes'),
-    getInput('max_files'),
-    getBooleanInput('review_simple_changes'),
-    getBooleanInput('review_comment_lgtm'),
-    getMultilineInput('path_filters'),
-    getInput('system_message'),
-    getInput('openai_light_model'),
-    getInput('openai_heavy_model'),
-    getInput('openai_model_temperature'),
-    getInput('openai_retries'),
-    getInput('openai_timeout_ms'),
-    getInput('openai_concurrency_limit'),
-    getInput('openai_base_url')
-  )
+  const sharedOpenAiOptions = {
+    modelTemperature: parseFloat(getInput('openai_model_temperature')),
+    retries: parseInt(getInput('openai_retries')),
+    timeoutMS: parseInt(getInput('openai_timeout_ms')),
+    systemMessage: getInput('system_message'),
+    apiBaseUrl: getInput('openai_base_url'),
+    debug: getBooleanInput('debug'),
+  } 
+
+  const options: Options = {
+    debug: getBooleanInput('debug'),
+    disableReview: getBooleanInput('disable_review'),
+    disableReleaseNotes: getBooleanInput('disable_release_notes'),
+    maxFiles: parseInt(getInput('max_files')),
+    reviewSimpleChanges: getBooleanInput('review_simple_changes'),
+    reviewCommentLGTM: getBooleanInput('review_comment_lgtm'),
+    pathFilters: new PathFilter(getMultilineInput('path_filters')),
+    
+    openaiLightModel: {
+      ...sharedOpenAiOptions,
+      model: getInput('openai_light_model'),
+      tokenLimits: new TokenLimits(getInput('openai_light_model'))
+    },
+    openaiHeavyModel: {
+      ...sharedOpenAiOptions,
+      model: getInput('openai_heavy_model'),
+      tokenLimits: new TokenLimits(getInput('openai_heavy_model'))
+    },
+    
+    openaiConcurrencyLimit: parseInt(getInput('openai_concurrency_limit')),
+    
+  }
 
   // print options
-  options.print()
+  info(JSON.stringify(options))
 
   const prompts: Prompts = new Prompts(
     getInput('summarize'),
@@ -43,10 +60,7 @@ async function run(): Promise<void> {
 
   let lightBot: Bot | null = null
   try {
-    lightBot = new Bot(
-      options,
-      new OpenAIOptions(options.openaiLightModel, options.lightTokenLimits)
-    )
+    lightBot = new Bot(options.openaiLightModel)
   } catch (e: any) {
     warning(
       `Skipped: failed to create summary bot, please check your openai_api_key: ${e}, backtrace: ${e.stack}`
@@ -56,10 +70,7 @@ async function run(): Promise<void> {
 
   let heavyBot: Bot | null = null
   try {
-    heavyBot = new Bot(
-      options,
-      new OpenAIOptions(options.openaiHeavyModel, options.heavyTokenLimits)
-    )
+    heavyBot = new Bot(options.openaiHeavyModel)
   } catch (e: any) {
     warning(
       `Skipped: failed to create review bot, please check your openai_api_key: ${e}, backtrace: ${e.stack}`
