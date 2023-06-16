@@ -9,7 +9,9 @@
     "act": "npm run build && ./bin/act pull_request_target --secret-file .secrets",
     "format": "prettier --write '**/*.ts'",
     "format-check": "prettier --check '**/*.ts'",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src/**/*.ts",
+    "test": "npx ncc build ./tests/index.ts -o ./tests/dist && node ./tests/dist/index.js --test",
+    "integration_test": "npx ncc build ./test_integration/index.ts -o ./test_integration/dist && node ./test_integration/dist/index.js --test"
   },
   "repository": {
     "type": "git",
@@ -38,10 +40,10 @@
     "winston-console-format": "^1.0.8"
   },
   "devDependencies": {
+    "@tsconfig/node12": "^1.0.11",
     "@types/node": "^20.2.4",
     "@typescript-eslint/eslint-plugin": "^5.59.6",
     "@typescript-eslint/parser": "^5.59.11",
-    "@tsconfig/node12": "^1.0.11",
     "@vercel/ncc": "^0.36.1",
     "chatgpt": "^5.2.4",
     "eslint": "^8.41.0",
