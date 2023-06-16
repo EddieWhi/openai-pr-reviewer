@@ -7,8 +7,6 @@ import { ReviewContext } from './review-context.js'
 import { Prompts } from './prompts.js'
 import { OctokitNoActionsPullRequest } from './octokit-no-action.js'
 
-
-
 const sharedOpenAiOptions = {
     modelTemperature: 0.0,
     retries: 3,
@@ -145,7 +143,7 @@ const prompts = new Prompts(
 const pullRequest = await OctokitNoActionsPullRequest.construct({
     owner: "EddieWhi",
     repo: "positional.rs.clone",
-    pull_number: 10,
+    pullNumber: 10,
 })
 
 await codeReview(context, lightBot, heavyBot, options, prompts, pullRequest)

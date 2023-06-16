@@ -11,7 +11,8 @@ import {
   // eslint-disable-next-line import/no-unresolved
 } from 'chatgpt'
 import pRetry from 'p-retry'
-import {OpenAIOptions, Options} from './options.js'
+import {OpenAIOptions} from './options.js'
+import stripIndent from 'strip-indent'
 
 // define type to save parentMessageId and conversationId
 export interface Ids {
@@ -32,9 +33,10 @@ export class Bot {
       this.retries = options.retries
 
       const currentDate = new Date().toISOString().split('T')[0]
-      const systemMessage = `${options.systemMessage} 
-Knowledge cutoff: ${options.tokenLimits.knowledgeCutOff}
-Current date: ${currentDate}`
+      const systemMessage = stripIndent(
+        `${options.systemMessage} 
+        Knowledge cutoff: ${options.tokenLimits.knowledgeCutOff}
+        Current date: ${currentDate}`)
 
       this.api = new ChatGPTAPI({
         apiBaseUrl: options.apiBaseUrl,
