@@ -1,6 +1,6 @@
 import {Octokit} from '@octokit/rest'
 import { PullRequest, CommitComparison, FileContent, ReviewComment, ReviewCommentArgs, Commit } from './pull-request.js'
-import {warning} from './logger.js'
+import {warning, logger} from './logger.js'
 
 const token = process.env.GITHUB_TOKEN
 
@@ -10,6 +10,12 @@ export const octokit = new Octokit({
   retry: {
     doNotRetry: ['429'],
     maxRetries: 10
+  },
+  logger: {
+    debug: (m: string, p: any[]) => logger.debug(m, p),
+    info: (m: string, p: any[]) => logger.info(m, p),
+    warn: (m: string, p: any[]) => logger.warn(m, p),
+    error: (m: string, p: any[]) => logger.error(m, p)
   }
 })
 
@@ -31,23 +37,39 @@ export class OctokitNoActionsPullRequest implements PullRequest {
   private issueCommentsCache: Record<number, any[]> = {}
   private reviewCommentsCache: Record<number, ReviewComment[]> = {}
 
-  constructor(params: OctokitNoActionsPullRequestParams) {
+  static async construct(params: OctokitNoActionsPullRequestParams): Promise<OctokitNoActionsPullRequest> {
+    const [issue, pull] = await Promise.all([
+        octokit.issues.get({
+        owner: params.owner,
+        repo: params.repo,
+        issue_number: params.pull_number
+      }),
+      octokit.pulls.get({
+        owner: params.owner,
+        repo: params.repo,
+        pull_number: params.pull_number
+      })
+    ])
+
+    logger.log(`Got pull request for ${params}`, pull)
+
+    return new OctokitNoActionsPullRequest({
+        ...params,
+        title: issue.data.title,
+        body: issue.data.body || "",
+        basesha: pull.data.base.sha,
+        headsha: pull.data.head.sha
+    })
+  }
+
+  constructor(params: OctokitNoActionsPullRequestParams & {title: string, body: string, basesha: string, headsha: string}) {
     this.owner = params.owner
     this.repo = params.repo
     this.number = params.pull_number
-
-    const pull = octokit.pulls.get({
-      owner: this.owner,
-      repo: this.repo,
-      pull_number: this.number
-    })
-
-    console.log(JSON.stringify(pull))
-    
-    this.title = ""
-    this.body = ""
-    this.basesha = ""
-    this.headsha = ""
+    this.title = params.title
+    this.body = params.body
+    this.basesha = params.basesha
+    this.headsha = params.headsha
   }
 
   async compareCommits(base: string, head: string): Promise<CommitComparison> {
@@ -69,7 +91,7 @@ export class OctokitNoActionsPullRequest implements PullRequest {
         per_page: perPage
       })).data
     )
-    
+
     return commits
   }
 

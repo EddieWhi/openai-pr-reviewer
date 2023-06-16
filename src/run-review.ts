@@ -142,10 +142,10 @@ const prompts = new Prompts(
     )
 )
 
-const pullRequest = new OctokitNoActionsPullRequest({
+const pullRequest = await OctokitNoActionsPullRequest.construct({
     owner: "EddieWhi",
     repo: "positional.rs.clone",
-    pull_number: 1,
+    pull_number: 10,
 })
 
 await codeReview(context, lightBot, heavyBot, options, prompts, pullRequest)
