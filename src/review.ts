@@ -1,5 +1,4 @@
 import {info, warning, error} from './logger.js'
-// eslint-disable-next-line camelcase
 import pLimit from 'p-limit'
 import {type Bot} from './bot.js'
 import {
@@ -15,8 +14,8 @@ import {Inputs} from './inputs.js'
 import {type Options} from './options.js'
 import {type Prompts} from './prompts.js'
 import {getTokenCount} from './tokenizer.js'
-import { ReviewContext} from './review-context.js'
-import { PullRequest } from './pull-request.js'
+import {ReviewContext} from './review-context.js'
+import {PullRequest} from './pull-request.js'
 
 const ignoreKeyword = '@openai: ignore'
 
@@ -35,9 +34,7 @@ export const codeReview = async (
   const inputs: Inputs = new Inputs()
   inputs.title = pullRequest.title
   if (pullRequest.body != null) {
-    inputs.description = commenter.getDescription(
-      pullRequest.body
-    )
+    inputs.description = commenter.getDescription(pullRequest.body)
   }
 
   // if the description contains ignore_keyword, skip
@@ -50,9 +47,7 @@ export const codeReview = async (
   inputs.systemMessage = options.openaiLightModel.systemMessage
 
   // get SUMMARIZE_TAG message
-  const existingSummarizeCmt = await commenter.findCommentWithTag(
-    SUMMARIZE_TAG
-  )
+  const existingSummarizeCmt = await commenter.findCommentWithTag(SUMMARIZE_TAG)
   let existingCommitIdsBlock = ''
   if (existingSummarizeCmt != null) {
     inputs.rawSummary = commenter.getRawSummary(existingSummarizeCmt.body)
@@ -76,11 +71,7 @@ export const codeReview = async (
     highestReviewedCommitId === '' ||
     highestReviewedCommitId === pullRequest.headsha
   ) {
-    info(
-      `Will review from the base commit: ${
-        pullRequest.basesha as string
-      }`
-    )
+    info(`Will review from the base commit: ${pullRequest.basesha as string}`)
     highestReviewedCommitId = pullRequest.basesha
   } else {
     info(`Will review from commit: ${highestReviewedCommitId}`)
@@ -244,7 +235,10 @@ ${hunks.oldHunk}
     )
 
     const diffTokens = getTokenCount(fileDiff)
-    if (tokens + diffTokens > options.openaiLightModel.tokenLimits.requestTokens) {
+    if (
+      tokens + diffTokens >
+      options.openaiLightModel.tokenLimits.requestTokens
+    ) {
       info(`summarize: diff tokens exceeds limit, skip ${filename}`)
       summariesFailed.push(`${filename} (diff tokens exceeds limit)`)
       return null
@@ -354,10 +348,7 @@ ${filename}: ${summary}
       let message = '### Summary by OpenAI\n\n'
       message += releaseNotesResponse
       try {
-        await commenter.updateDescription(
-          pullRequest.number,
-          message
-        )
+        await commenter.updateDescription(pullRequest.number, message)
       } catch (e: any) {
         warning(`release notes: error from github: ${e.message as string}`)
       }
@@ -478,7 +469,10 @@ ${
       let patchesToPack = 0
       for (const [, , patch] of patches) {
         const patchTokens = getTokenCount(patch)
-        if (tokens + patchTokens > options.openaiHeavyModel.tokenLimits.requestTokens) {
+        if (
+          tokens + patchTokens >
+          options.openaiHeavyModel.tokenLimits.requestTokens
+        ) {
           info(
             `only packing ${patchesToPack} / ${patches.length} patches, tokens: ${tokens} / ${options.openaiHeavyModel.tokenLimits.requestTokens}`
           )
@@ -516,7 +510,9 @@ ${
             commentChain = allChains
           }
         } catch (e: any) {
-          warning(`Failed to get comments: ${e}, skipping. backtrace: ${e.stack}`)
+          warning(
+            `Failed to get comments: ${e}, skipping. backtrace: ${e.stack}`
+          )
         }
         // try packing comment_chain into this request
         const commentChainTokens = getTokenCount(commentChain)
@@ -604,7 +600,7 @@ ${commentChain}
     summarizeComment += `
 ---
 In the recent run, only the files that changed from the \`base\` of the PR and between \`${highestReviewedCommitId}\` and \`${
-    pullRequest.headsha
+      pullRequest.headsha
     }\` commits were reviewed.
 
 ${
@@ -650,9 +646,7 @@ ${
   await commenter.comment(`${summarizeComment}`, SUMMARIZE_TAG, 'replace')
 
   // post the review
-  await commenter.submitReview(
-    commits[commits.length - 1].sha
-  )
+  await commenter.submitReview(commits[commits.length - 1].sha)
 }
 
 const splitPatch = (patch: string | null | undefined): string[] => {

@@ -12,8 +12,8 @@ import {Prompts} from './prompts.js'
 import {codeReview} from './review.js'
 import {handleReviewComment} from './review-comment.js'
 import {context} from '@actions/github'
-import { TokenLimits } from './limits.js'
-import { OctokitPullRequest } from './octokit.js'
+import {TokenLimits} from './limits.js'
+import {OctokitPullRequest} from './octokit.js'
 
 async function run(): Promise<void> {
   const sharedOpenAiOptions = {
@@ -22,8 +22,8 @@ async function run(): Promise<void> {
     timeoutMS: parseInt(getInput('openai_timeout_ms')),
     systemMessage: getInput('system_message'),
     apiBaseUrl: getInput('openai_base_url'),
-    debug: getBooleanInput('debug'),
-  } 
+    debug: getBooleanInput('debug')
+  }
 
   const options: Options = {
     debug: getBooleanInput('debug'),
@@ -33,7 +33,7 @@ async function run(): Promise<void> {
     reviewSimpleChanges: getBooleanInput('review_simple_changes'),
     reviewCommentLGTM: getBooleanInput('review_comment_lgtm'),
     pathFilters: new PathFilter(getMultilineInput('path_filters')),
-    
+
     openaiLightModel: {
       ...sharedOpenAiOptions,
       model: getInput('openai_light_model'),
@@ -44,9 +44,8 @@ async function run(): Promise<void> {
       model: getInput('openai_heavy_model'),
       tokenLimits: new TokenLimits(getInput('openai_heavy_model'))
     },
-    
-    openaiConcurrencyLimit: parseInt(getInput('openai_concurrency_limit')),
-    
+
+    openaiConcurrencyLimit: parseInt(getInput('openai_concurrency_limit'))
   }
 
   // print options
@@ -89,20 +88,33 @@ async function run(): Promise<void> {
 
     // check if the event is pull_request
     switch (context.eventName) {
-      case "pull_request":
-      case "pull_request_target":
-        
-        await codeReview(context, lightBot, heavyBot, options, prompts, pullRequest)
+      case 'pull_request':
+      case 'pull_request_target':
+        await codeReview(
+          context,
+          lightBot,
+          heavyBot,
+          options,
+          prompts,
+          pullRequest
+        )
         break
 
-      case "pull_request_review_comment":
-        await handleReviewComment(context, heavyBot, options, prompts, pullRequest)
+      case 'pull_request_review_comment':
+        await handleReviewComment(
+          context,
+          heavyBot,
+          options,
+          prompts,
+          pullRequest
+        )
         break
 
       default:
-        warning('Skipped: this action only works on push events or pull_request')
+        warning(
+          'Skipped: this action only works on push events or pull_request'
+        )
     }
-
   } catch (e: any) {
     if (e instanceof Error) {
       setFailed(`Failed to run: ${e.message}, backtrace: ${e.stack}`)

@@ -1,5 +1,4 @@
 import {info, warning} from './logger.js'
-// eslint-disable-next-line camelcase
 import {ReviewContext} from './review-context.js'
 import {type Bot} from './bot.js'
 import {
@@ -13,7 +12,7 @@ import {octokit} from './octokit.js'
 import {type Options} from './options.js'
 import {type Prompts} from './prompts.js'
 import {getTokenCount} from './tokenizer.js'
-import { PullRequest } from './pull-request.js'
+import {PullRequest} from './pull-request.js'
 
 const ASK_BOT = '@openai'
 

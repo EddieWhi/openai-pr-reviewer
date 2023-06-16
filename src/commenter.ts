@@ -1,9 +1,7 @@
 import {info, warning} from './logger.js'
 
-// eslint-disable-next-line camelcase
 import {ReviewContext} from './review-context.js'
-import { PullRequest, ReviewComment, ReviewCommentArgs } from './pull-request.js'
-
+import {PullRequest, ReviewComment, ReviewCommentArgs} from './pull-request.js'
 
 export const COMMENT_GREETING = ':robot: OpenAI'
 
@@ -39,9 +37,9 @@ export const COMMIT_ID_END_TAG = '<!-- commit_ids_reviewed_end -->'
 
 export class Commenter {
   context: ReviewContext
-  repo: { owner: string; repo: string }
+  repo: {owner: string; repo: string}
   issue: PullRequest
-  
+
   constructor(context: ReviewContext, issue: PullRequest) {
     this.issue = issue
     this.context = context
@@ -147,7 +145,7 @@ ${tag}`
         DESCRIPTION_END_TAG
       )
       const newDescription = `${description}${DESCRIPTION_START_TAG}\n${messageClean}\n${DESCRIPTION_END_TAG}`
-      
+
       await this.issue.updateDescription(newDescription)
     } catch (e) {
       warning(
@@ -214,18 +212,18 @@ ${COMMENT_TAG}`
         info(
           `Creating new review comment for ${comment.path}:${comment.startLine}-${comment.endLine}: ${comment.message}`
         )
-        
+
         const commentData: ReviewCommentArgs = {
           commit_id: commitId,
           body: comment.message,
           path: comment.path,
           line: comment.endLine,
-          ...(comment.startLine === comment.endLine) ? {} : { 
-            // eslint-disable-next-line camelcase
-            start_side: 'RIGHT',
-            // eslint-disable-next-line camelcase
-            start_line: comment.startLine
-          }
+          ...(comment.startLine === comment.endLine
+            ? {}
+            : {
+                start_side: 'RIGHT',
+                start_line: comment.startLine
+              })
         }
 
         try {
@@ -256,13 +254,12 @@ ${COMMENT_REPLY_TAG}
     try {
       // Post the reply to the user comment
       await this.issue.createReplyForReviewComment(topLevelComment.id, reply)
-
     } catch (error) {
       warning(`Failed to reply to the top-level comment ${error}`)
       try {
         await this.issue.createReplyForReviewComment(
-          topLevelComment.id, 
-          `Could not post the reply to the top-level comment due to the following error: ${error}`,
+          topLevelComment.id,
+          `Could not post the reply to the top-level comment due to the following error: ${error}`
         )
       } catch (e) {
         warning(`Failed to reply to the top-level comment ${e}`)
@@ -355,7 +352,10 @@ ${chain}
     return allChains
   }
 
-  private async composeCommentChain(reviewComments: any[], topLevelComment: any) {
+  private async composeCommentChain(
+    reviewComments: any[],
+    topLevelComment: any
+  ) {
     const conversationChain = reviewComments
       .filter((cmt: any) => cmt.in_reply_to_id === topLevelComment.id)
       .map((cmt: any) => `${cmt.user.login}: ${cmt.body}`)
@@ -419,11 +419,7 @@ ${chain}
     try {
       const cmt = await this.findCommentWithTag(tag)
       if (cmt) {
-        await this.issue.updateComment(
-          // eslint-disable-next-line camelcase
-          cmt.id,
-          body
-        )
+        await this.issue.updateComment(cmt.id, body)
       } else {
         await this.create(body)
       }

@@ -1,5 +1,3 @@
-import './fetch-polyfill.js'
-
 import {info, warning} from './logger.js'
 
 import {setFailed} from '@actions/core'
@@ -8,7 +6,6 @@ import {
   ChatGPTError,
   ChatMessage,
   SendMessageOptions
-  // eslint-disable-next-line import/no-unresolved
 } from 'chatgpt'
 import pRetry from 'p-retry'
 import {OpenAIOptions} from './options.js'
@@ -36,7 +33,8 @@ export class Bot {
       const systemMessage = stripIndent(
         `${options.systemMessage} 
         Knowledge cutoff: ${options.tokenLimits.knowledgeCutOff}
-        Current date: ${currentDate}`)
+        Current date: ${currentDate}`
+      )
 
       this.api = new ChatGPTAPI({
         apiBaseUrl: options.apiBaseUrl,

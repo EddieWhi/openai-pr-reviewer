@@ -1,5 +1,12 @@
 import {Octokit} from '@octokit/rest'
-import { PullRequest, CommitComparison, FileContent, ReviewComment, ReviewCommentArgs, Commit } from './pull-request.js'
+import {
+  PullRequest,
+  CommitComparison,
+  FileContent,
+  ReviewComment,
+  ReviewCommentArgs,
+  Commit
+} from './pull-request.js'
 import {warning, logger} from './logger.js'
 
 const token = process.env.GITHUB_TOKEN
@@ -37,9 +44,11 @@ export class OctokitNoActionsPullRequest implements PullRequest {
   private issueCommentsCache: Record<number, any[]> = {}
   private reviewCommentsCache: Record<number, ReviewComment[]> = {}
 
-  static async construct(params: OctokitNoActionsPullRequestParams): Promise<OctokitNoActionsPullRequest> {
+  static async construct(
+    params: OctokitNoActionsPullRequestParams
+  ): Promise<OctokitNoActionsPullRequest> {
     const [issue, pull] = await Promise.all([
-        octokit.issues.get({
+      octokit.issues.get({
         owner: params.owner,
         repo: params.repo,
         issue_number: params.pullNumber
@@ -54,15 +63,22 @@ export class OctokitNoActionsPullRequest implements PullRequest {
     logger.log(`Got pull request for ${params}`, pull)
 
     return new OctokitNoActionsPullRequest({
-        ...params,
-        title: issue.data.title,
-        body: issue.data.body || "",
-        basesha: pull.data.base.sha,
-        headsha: pull.data.head.sha
+      ...params,
+      title: issue.data.title,
+      body: issue.data.body || '',
+      basesha: pull.data.base.sha,
+      headsha: pull.data.head.sha
     })
   }
 
-  constructor(params: OctokitNoActionsPullRequestParams & {title: string, body: string, basesha: string, headsha: string}) {
+  constructor(
+    params: OctokitNoActionsPullRequestParams & {
+      title: string
+      body: string
+      basesha: string
+      headsha: string
+    }
+  ) {
     this.owner = params.owner
     this.repo = params.repo
     this.number = params.pullNumber
@@ -83,25 +99,27 @@ export class OctokitNoActionsPullRequest implements PullRequest {
 
   async listCommits(): Promise<Commit[]> {
     const commits = await this.getAllPages(
-      async (page, perPage) => (await octokit.pulls.listCommits({
-        owner: this.owner,
-        repo: this.repo,
-        pull_number: this.number,
-        page,
-        per_page: perPage
-      })).data
+      async (page, perPage) =>
+        (
+          await octokit.pulls.listCommits({
+            owner: this.owner,
+            repo: this.repo,
+            pull_number: this.number,
+            page,
+            per_page: perPage
+          })
+        ).data
     )
 
     return commits
   }
 
-
   async getContent(path: string, ref: string): Promise<FileContent> {
     return await octokit.repos.getContent({
       owner: this.owner,
       repo: this.repo,
-      path: path,
-      ref: ref
+      path,
+      ref
     })
   }
 
@@ -111,7 +129,7 @@ export class OctokitNoActionsPullRequest implements PullRequest {
       repo: this.repo,
       pull_number: this.number
     })
-    return pull.data.body || ""
+    return pull.data.body || ''
   }
 
   async updateDescription(description: string): Promise<void> {
@@ -127,18 +145,16 @@ export class OctokitNoActionsPullRequest implements PullRequest {
     await octokit.issues.createComment({
       owner: this.owner,
       repo: this.repo,
-      // eslint-disable-next-line camelcase
       issue_number: this.number,
       body
     })
   }
 
-  async updateComment(comment_id: number, body: string): Promise<void> {
+  async updateComment(commentId: number, body: string): Promise<void> {
     await octokit.issues.updateComment({
       owner: this.owner,
       repo: this.repo,
-      // eslint-disable-next-line camelcase
-      comment_id,
+      comment_id: commentId,
       body
     })
   }
@@ -148,16 +164,19 @@ export class OctokitNoActionsPullRequest implements PullRequest {
     if (cached) {
       return cached
     }
-  
+
     try {
       const comments = await this.getAllPages(
-        async (page, perPage) => (await octokit.issues.listComments({
-          owner: this.owner,
-          repo: this.repo,
-          issue_number: this.number,
-          page,
-          per_page: perPage
-        })).data
+        async (page, perPage) =>
+          (
+            await octokit.issues.listComments({
+              owner: this.owner,
+              repo: this.repo,
+              issue_number: this.number,
+              page,
+              per_page: perPage
+            })
+          ).data
       )
 
       this.issueCommentsCache[this.number] = comments
@@ -168,22 +187,24 @@ export class OctokitNoActionsPullRequest implements PullRequest {
     }
   }
 
-
   async listReviewComments(): Promise<ReviewComment[]> {
     const cached = this.reviewCommentsCache[this.number]
     if (cached) {
       return cached
     }
-  
+
     try {
       const comments = await this.getAllPages(
-        async (page, perPage) => (await octokit.pulls.listReviewComments({
-          owner: this.owner,
-          repo: this.repo,
-          pull_number: this.number,
-          page,
-          per_page: perPage
-        })).data
+        async (page, perPage) =>
+          (
+            await octokit.pulls.listReviewComments({
+              owner: this.owner,
+              repo: this.repo,
+              pull_number: this.number,
+              page,
+              per_page: perPage
+            })
+          ).data
       )
 
       this.reviewCommentsCache[this.number] = comments
@@ -194,12 +215,11 @@ export class OctokitNoActionsPullRequest implements PullRequest {
     }
   }
 
-  async updateReviewComment(comment_id: number, body: string): Promise<void> {
+  async updateReviewComment(commentId: number, body: string): Promise<void> {
     await octokit.pulls.updateReviewComment({
       owner: this.owner,
       repo: this.repo,
-      // eslint-disable-next-line camelcase
-      comment_id,
+      comment_id: commentId,
       body
     })
   }
@@ -213,21 +233,25 @@ export class OctokitNoActionsPullRequest implements PullRequest {
     })
   }
 
-  async createReplyForReviewComment(comment_id: any, body: string): Promise<void> {
+  async createReplyForReviewComment(
+    commentId: any,
+    body: string
+  ): Promise<void> {
     await octokit.pulls.createReplyForReviewComment({
       owner: this.owner,
       repo: this.repo,
       pull_number: this.number,
-      // eslint-disable-next-line camelcase
-      comment_id,
+      comment_id: commentId,
       body
     })
   }
 
-  private async getAllPages<T>(getPage: (page: number, perPage: number) => Promise<T[]>): Promise<T[]> {
+  private async getAllPages<T>(
+    getPage: (page: number, perPage: number) => Promise<T[]>
+  ): Promise<T[]> {
     const allItems: T[] = []
     const perPage = 100
-    for (var pageNumber = 1; ; pageNumber++) {
+    for (let pageNumber = 1; ; pageNumber++) {
       const pageData = await getPage(pageNumber, perPage)
 
       if (pageData.length === 0) {
@@ -242,5 +266,4 @@ export class OctokitNoActionsPullRequest implements PullRequest {
     }
     return allItems
   }
-  
 }
