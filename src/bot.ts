@@ -1,6 +1,8 @@
 import './fetch-polyfill.js'
 
-import {info, setFailed, warning} from '@actions/core'
+import {info, warning} from './logger.js'
+
+import {setFailed} from '@actions/core'
 import {
   ChatGPTAPI,
   ChatGPTError,

@@ -1,47 +1,25 @@
-import {getInput} from '@actions/core'
-import {Octokit} from '@octokit/action'
-import {Octokit as CoreOctokit} from '@octokit/core'
-import {retry} from '@octokit/plugin-retry'
-import {throttling} from '@octokit/plugin-throttling'
+import {Octokit} from '@octokit/rest'
 import { PullRequest, CommitComparison, FileContent, ReviewComment, ReviewCommentArgs, Commit } from './pull-request.js'
-import { ReviewContext } from './review-context.js'
 import {warning} from './logger.js'
-import assert from 'assert'
 
-const token = getInput('token') || process.env.GITHUB_TOKEN
+const token = process.env.GITHUB_TOKEN
 
-const RetryAndThrottlingOctokit = Octokit.plugin(throttling, retry)
-export const octokit = new RetryAndThrottlingOctokit({
+export const octokit = new Octokit({
   auth: `token ${token}`,
-  throttle: {
-    onRateLimit: (
-      retryAfter: number,
-      options: any,
-      _o: CoreOctokit,
-      retryCount: number
-    ) => {
-      warning(
-        `Request quota exhausted for request ${options.method} ${options.url}
-Retry after: ${retryAfter} seconds
-Retry count: ${retryCount}
-`
-      )
-      return true
-    },
-    onSecondaryRateLimit: (_retryAfter: number, options: any) => {
-      warning(
-        `SecondaryRateLimit detected for request ${options.method} ${options.url}`
-      )
-      return true
-    }
-  },
+  userAgent: 'openai-pr-reviewer-test v1.0.0',
   retry: {
     doNotRetry: ['429'],
     maxRetries: 10
   }
 })
 
-export class OctokitPullRequest implements PullRequest {
+export interface OctokitNoActionsPullRequestParams {
+  owner: string
+  repo: string
+  pull_number: number
+}
+
+export class OctokitNoActionsPullRequest implements PullRequest {
   readonly owner: string
   readonly repo: string
   readonly title: string
@@ -51,20 +29,25 @@ export class OctokitPullRequest implements PullRequest {
   readonly headsha: string
 
   private issueCommentsCache: Record<number, any[]> = {}
-  private reviewCommentsCache: Record<number, any[]> = {}
+  private reviewCommentsCache: Record<number, ReviewComment[]> = {}
 
-  constructor(context: ReviewContext) {
-    const pr_context = context.payload.pull_request || context.payload.issue
-    assert(pr_context, 'context.payload.pull_request is null')
+  constructor(params: OctokitNoActionsPullRequestParams) {
+    this.owner = params.owner
+    this.repo = params.repo
+    this.number = params.pull_number
+
+    const pull = octokit.pulls.get({
+      owner: this.owner,
+      repo: this.repo,
+      pull_number: this.number
+    })
+
+    console.log(JSON.stringify(pull))
     
-    this.title = pr_context.title
-    this.body = pr_context.body || ""
-    this.number = pr_context.number
-    this.basesha = pr_context.base.sha
-    this.headsha = pr_context.head.sha
-
-    this.owner = context.repo.owner
-    this.repo = context.repo.repo
+    this.title = ""
+    this.body = ""
+    this.basesha = ""
+    this.headsha = ""
   }
 
   async compareCommits(base: string, head: string): Promise<CommitComparison> {
@@ -90,6 +73,7 @@ export class OctokitPullRequest implements PullRequest {
     return commits
   }
 
+
   async getContent(path: string, ref: string): Promise<FileContent> {
     return await octokit.repos.getContent({
       owner: this.owner,
@@ -98,7 +82,7 @@ export class OctokitPullRequest implements PullRequest {
       ref: ref
     })
   }
-  
+
   async getDescription(): Promise<string> {
     const pull = await octokit.pulls.get({
       owner: this.owner,
@@ -161,6 +145,7 @@ export class OctokitPullRequest implements PullRequest {
       throw e
     }
   }
+
 
   async listReviewComments(): Promise<ReviewComment[]> {
     const cached = this.reviewCommentsCache[this.number]
@@ -235,4 +220,5 @@ export class OctokitPullRequest implements PullRequest {
     }
     return allItems
   }
+  
 }

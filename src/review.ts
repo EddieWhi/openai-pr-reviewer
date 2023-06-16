@@ -1,4 +1,4 @@
-import {error, info, warning} from '@actions/core'
+import {info, warning, error} from './logger.js'
 // eslint-disable-next-line camelcase
 import pLimit from 'p-limit'
 import {type Bot} from './bot.js'
@@ -12,11 +12,11 @@ import {
   SUMMARIZE_TAG
 } from './commenter.js'
 import {Inputs} from './inputs.js'
-import {octokit} from './octokit.js'
 import {type Options} from './options.js'
 import {type Prompts} from './prompts.js'
 import {getTokenCount} from './tokenizer.js'
 import { ReviewContext} from './review-context.js'
+import { PullRequest } from './pull-request.js'
 
 const ignoreKeyword = '@openai: ignore'
 
@@ -25,32 +25,18 @@ export const codeReview = async (
   lightBot: Bot,
   heavyBot: Bot,
   options: Options,
-  prompts: Prompts
+  prompts: Prompts,
+  pullRequest: PullRequest
 ): Promise<void> => {
-  const repo = context.repo
-  const commenter: Commenter = new Commenter(context)
+  const commenter: Commenter = new Commenter(context, pullRequest)
 
   const openaiConcurrencyLimit = pLimit(options.openaiConcurrencyLimit)
 
-  if (
-    context.eventName !== 'pull_request' &&
-    context.eventName !== 'pull_request_target'
-  ) {
-    warning(
-      `Skipped: current event is ${context.eventName}, only support pull_request event`
-    )
-    return
-  }
-  if (context.payload.pull_request == null) {
-    warning('Skipped: context.payload.pull_request is null')
-    return
-  }
-
   const inputs: Inputs = new Inputs()
-  inputs.title = context.payload.pull_request.title
-  if (context.payload.pull_request.body != null) {
+  inputs.title = pullRequest.title
+  if (pullRequest.body != null) {
     inputs.description = commenter.getDescription(
-      context.payload.pull_request.body
+      pullRequest.body
     )
   }
 
@@ -65,8 +51,7 @@ export const codeReview = async (
 
   // get SUMMARIZE_TAG message
   const existingSummarizeCmt = await commenter.findCommentWithTag(
-    SUMMARIZE_TAG,
-    context.payload.pull_request.number
+    SUMMARIZE_TAG
   )
   let existingCommitIdsBlock = ''
   if (existingSummarizeCmt != null) {
@@ -77,7 +62,7 @@ export const codeReview = async (
     )
   }
 
-  const allCommitIds = await commenter.getAllCommitIds()
+  const allCommitIds = (await pullRequest.listCommits()).map(c => c.sha)
   // find highest reviewed commit id
   let highestReviewedCommitId = ''
   if (existingCommitIdsBlock !== '') {
@@ -89,33 +74,29 @@ export const codeReview = async (
 
   if (
     highestReviewedCommitId === '' ||
-    highestReviewedCommitId === context.payload.pull_request.head.sha
+    highestReviewedCommitId === pullRequest.headsha
   ) {
     info(
       `Will review from the base commit: ${
-        context.payload.pull_request.base.sha as string
+        pullRequest.basesha as string
       }`
     )
-    highestReviewedCommitId = context.payload.pull_request.base.sha
+    highestReviewedCommitId = pullRequest.basesha
   } else {
     info(`Will review from commit: ${highestReviewedCommitId}`)
   }
 
   // Fetch the diff between the highest reviewed commit and the latest commit of the PR branch
-  const incrementalDiff = await octokit.repos.compareCommits({
-    owner: repo.owner,
-    repo: repo.repo,
-    base: highestReviewedCommitId,
-    head: context.payload.pull_request.head.sha
-  })
+  const incrementalDiff = await pullRequest.compareCommits(
+    highestReviewedCommitId,
+    pullRequest.headsha
+  )
 
   // Fetch the diff between the target branch's base commit and the latest commit of the PR branch
-  const targetBranchDiff = await octokit.repos.compareCommits({
-    owner: repo.owner,
-    repo: repo.repo,
-    base: context.payload.pull_request.base.sha,
-    head: context.payload.pull_request.head.sha
-  })
+  const targetBranchDiff = await pullRequest.compareCommits(
+    pullRequest.basesha,
+    pullRequest.headsha
+  )
 
   const incrementalFiles = incrementalDiff.data.files
   const targetBranchFiles = targetBranchDiff.data.files
@@ -163,17 +144,12 @@ export const codeReview = async (
     filterSelectedFiles.map(async file => {
       // retrieve file contents
       let fileContent = ''
-      if (context.payload.pull_request == null) {
-        warning('Skipped: context.payload.pull_request is null')
-        return null
-      }
+
       try {
-        const contents = await octokit.repos.getContent({
-          owner: repo.owner,
-          repo: repo.repo,
-          path: file.filename,
-          ref: context.payload.pull_request.base.sha
-        })
+        const contents = await pullRequest.getContent(
+          file.filename,
+          pullRequest.basesha
+        )
         if (contents.data != null) {
           if (!Array.isArray(contents.data)) {
             if (
@@ -379,7 +355,7 @@ ${filename}: ${summary}
       message += releaseNotesResponse
       try {
         await commenter.updateDescription(
-          context.payload.pull_request.number,
+          pullRequest.number,
           message
         )
       } catch (e: any) {
@@ -514,10 +490,6 @@ ${
 
       let patchesPacked = 0
       for (const [startLine, endLine, patch] of patches) {
-        if (context.payload.pull_request == null) {
-          warning('No pull request found, skipping.')
-          continue
-        }
         // see if we can pack more patches into this request
         if (patchesPacked >= patchesToPack) {
           info(
@@ -533,7 +505,6 @@ ${
         let commentChain = ''
         try {
           const allChains = await commenter.getCommentChainsWithinRange(
-            context.payload.pull_request.number,
             filename,
             startLine,
             endLine,
@@ -545,11 +516,7 @@ ${
             commentChain = allChains
           }
         } catch (e: any) {
-          warning(
-            `Failed to get comments: ${e as string}, skipping. backtrace: ${
-              e.stack as string
-            }`
-          )
+          warning(`Failed to get comments: ${e}, skipping. backtrace: ${e.stack}`)
         }
         // try packing comment_chain into this request
         const commentChainTokens = getTokenCount(commentChain)
@@ -601,21 +568,13 @@ ${commentChain}
           ) {
             continue
           }
-          if (context.payload.pull_request == null) {
-            warning('No pull request found, skipping.')
-            continue
-          }
 
-          try {
-            await commenter.bufferReviewComment(
-              filename,
-              review.startLine,
-              review.endLine,
-              `${review.comment}`
-            )
-          } catch (e: any) {
-            reviewsFailed.push(`${filename} comment failed (${e as string})`)
-          }
+          commenter.bufferReviewComment(
+            filename,
+            review.startLine,
+            review.endLine,
+            `${review.comment}`
+          )
         }
       } catch (e: any) {
         warning(
@@ -645,7 +604,7 @@ ${commentChain}
     summarizeComment += `
 ---
 In the recent run, only the files that changed from the \`base\` of the PR and between \`${highestReviewedCommitId}\` and \`${
-      context.payload.pull_request.head.sha
+    pullRequest.headsha
     }\` commits were reviewed.
 
 ${
@@ -683,7 +642,7 @@ ${
     // add existing_comment_ids_block with latest head sha
     summarizeComment += `\n${commenter.addReviewedCommitId(
       existingCommitIdsBlock,
-      context.payload.pull_request.head.sha
+      pullRequest.headsha
     )}`
   }
 
@@ -692,7 +651,6 @@ ${
 
   // post the review
   await commenter.submitReview(
-    context.payload.pull_request.number,
     commits[commits.length - 1].sha
   )
 }

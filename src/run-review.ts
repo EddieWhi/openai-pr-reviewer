@@ -5,6 +5,7 @@ import { Bot } from './bot.js'
 import { Options, PathFilter } from './options.js'
 import { ReviewContext } from './review-context.js'
 import { Prompts } from './prompts.js'
+import { OctokitNoActionsPullRequest } from './octokit-no-action.js'
 
 
 
@@ -141,4 +142,10 @@ const prompts = new Prompts(
     )
 )
 
-await codeReview(context, lightBot, heavyBot, options, prompts)
+const pullRequest = new OctokitNoActionsPullRequest({
+    owner: "EddieWhi",
+    repo: "positional.rs.clone",
+    pull_number: 1,
+})
+
+await codeReview(context, lightBot, heavyBot, options, prompts, pullRequest)

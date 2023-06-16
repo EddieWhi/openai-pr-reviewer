@@ -1,4 +1,4 @@
-import {info, warning} from '@actions/core'
+import {info, warning} from './logger.js'
 // eslint-disable-next-line camelcase
 import {ReviewContext} from './review-context.js'
 import {type Bot} from './bot.js'
@@ -13,6 +13,7 @@ import {octokit} from './octokit.js'
 import {type Options} from './options.js'
 import {type Prompts} from './prompts.js'
 import {getTokenCount} from './tokenizer.js'
+import { PullRequest } from './pull-request.js'
 
 const ASK_BOT = '@openai'
 
@@ -20,10 +21,11 @@ export const handleReviewComment = async (
   context: ReviewContext,
   heavyBot: Bot,
   options: Options,
-  prompts: Prompts
+  prompts: Prompts,
+  pullRequest: PullRequest
 ) => {
   const repo = context.repo
-  const commenter: Commenter = new Commenter(context)
+  const commenter: Commenter = new Commenter(context, pullRequest)
   const inputs: Inputs = new Inputs()
 
   if (context.eventName !== 'pull_request_review_comment') {
@@ -75,7 +77,7 @@ export const handleReviewComment = async (
     inputs.filename = comment.path
 
     const {chain: commentChain, topLevelComment} =
-      await commenter.getCommentChain(pullNumber, comment)
+      await commenter.getCommentChain(comment)
 
     if (!topLevelComment) {
       warning('Failed to find the top-level comment to reply to')
@@ -154,10 +156,7 @@ export const handleReviewComment = async (
       }
 
       // get summary of the PR
-      const summary = await commenter.findCommentWithTag(
-        SUMMARIZE_TAG,
-        pullNumber
-      )
+      const summary = await commenter.findCommentWithTag(SUMMARIZE_TAG)
       if (summary) {
         // pack short summary into the inputs if it is not too long
         const shortSummary = commenter.getShortSummary(summary.body)

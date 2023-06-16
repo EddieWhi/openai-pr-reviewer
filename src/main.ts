@@ -13,6 +13,7 @@ import {codeReview} from './review.js'
 import {handleReviewComment} from './review-comment.js'
 import {context} from '@actions/github'
 import { TokenLimits } from './limits.js'
+import { OctokitPullRequest } from './octokit.js'
 
 async function run(): Promise<void> {
   const sharedOpenAiOptions = {
@@ -79,19 +80,29 @@ async function run(): Promise<void> {
   }
 
   try {
-    // check if the event is pull_request
-    if (
-      process.env.GITHUB_EVENT_NAME === 'pull_request' ||
-      process.env.GITHUB_EVENT_NAME === 'pull_request_target'
-    ) {
-      await codeReview(context, lightBot, heavyBot, options, prompts)
-    } else if (
-      process.env.GITHUB_EVENT_NAME === 'pull_request_review_comment'
-    ) {
-      await handleReviewComment(context, heavyBot, options, prompts)
-    } else {
-      warning('Skipped: this action only works on push events or pull_request')
+    if (context.payload.pull_request == null) {
+      warning('Skipped: context.payload.pull_request is null')
+      return
     }
+
+    const pullRequest = new OctokitPullRequest(context)
+
+    // check if the event is pull_request
+    switch (context.eventName) {
+      case "pull_request":
+      case "pull_request_target":
+        
+        await codeReview(context, lightBot, heavyBot, options, prompts, pullRequest)
+        break
+
+      case "pull_request_review_comment":
+        await handleReviewComment(context, heavyBot, options, prompts, pullRequest)
+        break
+
+      default:
+        warning('Skipped: this action only works on push events or pull_request')
+    }
+
   } catch (e: any) {
     if (e instanceof Error) {
       setFailed(`Failed to run: ${e.message}, backtrace: ${e.stack}`)
