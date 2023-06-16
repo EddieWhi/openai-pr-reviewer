@@ -6,14 +6,15 @@ import {
   info,
   warning
 } from '@actions/core'
-import {Bot} from './bot.js'
-import {Options, PathFilter} from './options.js'
-import {Prompts} from './prompts.js'
-import {codeReview} from './review.js'
-import {handleReviewComment} from './review-comment.js'
+import {Bot} from './bot'
+import {Options, PathFilter} from './options'
+import {Prompts} from './prompts'
+import {codeReview} from './review'
+import {handleReviewComment} from './review-comment'
 import {context} from '@actions/github'
-import {TokenLimits} from './limits.js'
-import {OctokitPullRequest} from './octokit.js'
+import {TokenLimits} from './limits'
+import {OctokitPullRequest} from './pull-request-impl'
+import assert from 'assert'
 
 async function run(): Promise<void> {
   const sharedOpenAiOptions = {
@@ -79,12 +80,18 @@ async function run(): Promise<void> {
   }
 
   try {
-    if (context.payload.pull_request == null) {
-      warning('Skipped: context.payload.pull_request is null')
-      return
-    }
+    const prContext = context.payload.pull_request || context.payload.issue
+    assert(prContext, 'context.payload.pull_request is null')
 
-    const pullRequest = new OctokitPullRequest(context)
+    const pullRequest = new OctokitPullRequest({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      pullNumber: prContext.number,
+      title: prContext.title,
+      body: prContext.body || '',
+      headsha: prContext.head?.sha || '',
+      basesha: prContext.base?.sha || ''
+    })
 
     // check if the event is pull_request
     switch (context.eventName) {
@@ -132,4 +139,8 @@ process
     warning(`Uncaught Exception thrown: ${e}, backtrace: ${e.stack}`)
   })
 
-await run()
+run()
+  // eslint-disable-next-line github/no-then
+  .then(() => info('Done'))
+  // eslint-disable-next-line github/no-then
+  .catch(e => warning(`Uncaught Exception thrown: ${e}, backtrace: ${e.stack}`))

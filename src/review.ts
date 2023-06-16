@@ -1,6 +1,6 @@
-import {info, warning, error} from './logger.js'
+import {info, warning, error} from './logger'
 import pLimit from 'p-limit'
-import {type Bot} from './bot.js'
+import {type Bot} from './bot'
 import {
   Commenter,
   COMMENT_REPLY_TAG,
@@ -9,13 +9,13 @@ import {
   SHORT_SUMMARY_END_TAG,
   SHORT_SUMMARY_START_TAG,
   SUMMARIZE_TAG
-} from './commenter.js'
-import {Inputs} from './inputs.js'
-import {type Options} from './options.js'
-import {type Prompts} from './prompts.js'
-import {getTokenCount} from './tokenizer.js'
-import {ReviewContext} from './review-context.js'
-import {PullRequest} from './pull-request.js'
+} from './commenter'
+import {Inputs} from './inputs'
+import {type Options} from './options'
+import {type Prompts} from './prompts'
+import {getTokenCount} from './tokenizer'
+import {ReviewContext} from './review-context'
+import {PullRequest} from './pull-request'
 
 const ignoreKeyword = '@openai: ignore'
 

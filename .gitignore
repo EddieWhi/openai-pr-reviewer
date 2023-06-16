@@ -125,4 +125,7 @@ tags.lock
 bin/act
 
 # VSCode settings
-.vscode
+.vscode/
+
+# Dist should be ignored
+dist/

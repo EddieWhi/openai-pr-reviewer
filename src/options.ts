@@ -1,6 +1,6 @@
-import {info} from './logger.js'
+import {info} from './logger'
 import {minimatch} from 'minimatch'
-import {TokenLimits} from './limits.js'
+import {TokenLimits} from './limits'
 
 export interface Options {
   debug: boolean

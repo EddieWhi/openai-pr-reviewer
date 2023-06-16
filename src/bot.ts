@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/extensions
 import './fetch-polyfill.js'
 
-import {info, warning} from './logger.js'
+import {info, warning} from './logger'
 
 import {setFailed} from '@actions/core'
 import {
@@ -11,7 +11,7 @@ import {
   SendMessageOptions
 } from 'chatgpt'
 import pRetry from 'p-retry'
-import {OpenAIOptions} from './options.js'
+import {OpenAIOptions} from './options'
 import stripIndent from 'strip-indent'
 
 // define type to save parentMessageId and conversationId

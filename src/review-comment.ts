@@ -1,18 +1,17 @@
-import {info, warning} from './logger.js'
-import {ReviewContext} from './review-context.js'
-import {type Bot} from './bot.js'
+import {info, warning} from './logger'
+import {ReviewContext} from './review-context'
+import {type Bot} from './bot'
 import {
   Commenter,
   COMMENT_REPLY_TAG,
   COMMENT_TAG,
   SUMMARIZE_TAG
-} from './commenter.js'
-import {Inputs} from './inputs.js'
-import {octokit} from './octokit.js'
-import {type Options} from './options.js'
-import {type Prompts} from './prompts.js'
-import {getTokenCount} from './tokenizer.js'
-import {PullRequest} from './pull-request.js'
+} from './commenter'
+import {Inputs} from './inputs'
+import {type Options} from './options'
+import {type Prompts} from './prompts'
+import {getTokenCount} from './tokenizer'
+import {PullRequest} from './pull-request'
 
 const ASK_BOT = '@openai'
 
@@ -23,7 +22,6 @@ export const handleReviewComment = async (
   prompts: Prompts,
   pullRequest: PullRequest
 ) => {
-  const repo = context.repo
   const commenter: Commenter = new Commenter(context, pullRequest)
   const inputs: Inputs = new Inputs()
 
@@ -94,12 +92,10 @@ export const handleReviewComment = async (
       let fileDiff = ''
       try {
         // get diff for this file by comparing the base and head commits
-        const diffAll = await octokit.repos.compareCommits({
-          owner: repo.owner,
-          repo: repo.repo,
-          base: context.payload.pull_request.base.sha,
-          head: context.payload.pull_request.head.sha
-        })
+        const diffAll = await pullRequest.compareCommits(
+          context.payload.pull_request.base.sha,
+          context.payload.pull_request.head.sha
+        )
         if (diffAll.data) {
           const files = diffAll.data.files
           if (files != null) {

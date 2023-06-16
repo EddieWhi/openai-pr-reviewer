@@ -1,7 +1,7 @@
-import {info, warning} from './logger.js'
+import {info, warning} from './logger'
 
-import {ReviewContext} from './review-context.js'
-import {PullRequest, ReviewComment, ReviewCommentArgs} from './pull-request.js'
+import {ReviewContext} from './review-context'
+import {PullRequest, ReviewComment, ReviewCommentArgs} from './pull-request'
 
 export const COMMENT_GREETING = ':robot: OpenAI'
 
@@ -38,10 +38,10 @@ export const COMMIT_ID_END_TAG = '<!-- commit_ids_reviewed_end -->'
 export class Commenter {
   context: ReviewContext
   repo: {owner: string; repo: string}
-  issue: PullRequest
+  pr: PullRequest
 
   constructor(context: ReviewContext, issue: PullRequest) {
-    this.issue = issue
+    this.pr = issue
     this.context = context
     this.repo = context.repo
   }
@@ -50,18 +50,6 @@ export class Commenter {
    * @param mode Can be "create", "replace". Default is "replace".
    */
   async comment(message: string, tag: string, mode: string) {
-    //TODO: extract from issues somewhere else
-    // if (this.context.payload.pull_request != null) {
-    //   target = this.context.payload.pull_request.number
-    // } else if (this.context.payload.issue != null) {
-    //   target = this.context.payload.issue.number
-    // } else {
-    //   warning(
-    //     'Skipped: context.payload.pull_request and context.payload.issue are both null'
-    //   )
-    //   return
-    // }
-
     if (!tag) {
       tag = COMMENT_TAG
     }
@@ -137,7 +125,7 @@ ${tag}`
     // add this response to the description field of the PR as release notes by looking
     // for the tag (marker)
     try {
-      const description = this.getDescription(await this.issue.getDescription())
+      const description = this.getDescription(await this.pr.getDescription())
 
       const messageClean = this.removeContentWithinTags(
         message,
@@ -146,7 +134,7 @@ ${tag}`
       )
       const newDescription = `${description}${DESCRIPTION_START_TAG}\n${messageClean}\n${DESCRIPTION_END_TAG}`
 
-      await this.issue.updateDescription(newDescription)
+      await this.pr.updateDescription(newDescription)
     } catch (e) {
       warning(
         `Failed to get PR: ${e}, skipping adding release notes to description.`
@@ -182,7 +170,7 @@ ${COMMENT_TAG}`
 
   async submitReview(commitId: string) {
     info(
-      `Submitting review for PR #${this.issue.number}, total comments: ${this.reviewCommentsBuffer.length}`
+      `Submitting review for PR #${this.pr.number}, total comments: ${this.reviewCommentsBuffer.length}`
     )
     let commentCounter = 0
     for (const comment of this.reviewCommentsBuffer) {
@@ -199,7 +187,7 @@ ${COMMENT_TAG}`
             `Updating review comment for ${comment.path}:${comment.startLine}-${comment.endLine}: ${comment.message}`
           )
           try {
-            await this.issue.updateReviewComment(c.id, comment.message)
+            await this.pr.updateReviewComment(c.id, comment.message)
           } catch (e) {
             warning(`Failed to update review comment: ${e}`)
           }
@@ -227,7 +215,7 @@ ${COMMENT_TAG}`
         }
 
         try {
-          await this.issue.createReviewComment(commentData)
+          await this.pr.createReviewComment(commentData)
         } catch (e) {
           warning(`Failed to create review comment: ${e}`)
         }
@@ -253,11 +241,11 @@ ${COMMENT_REPLY_TAG}
 `
     try {
       // Post the reply to the user comment
-      await this.issue.createReplyForReviewComment(topLevelComment.id, reply)
+      await this.pr.createReplyForReviewComment(topLevelComment.id, reply)
     } catch (error) {
       warning(`Failed to reply to the top-level comment ${error}`)
       try {
-        await this.issue.createReplyForReviewComment(
+        await this.pr.createReplyForReviewComment(
           topLevelComment.id,
           `Could not post the reply to the top-level comment due to the following error: ${error}`
         )
@@ -272,7 +260,7 @@ ${COMMENT_REPLY_TAG}
           COMMENT_TAG,
           COMMENT_REPLY_TAG
         )
-        await this.issue.updateReviewComment(topLevelComment.id, newBody)
+        await this.pr.updateReviewComment(topLevelComment.id, newBody)
       }
     } catch (error) {
       warning(`Failed to update the top-level comment ${error}`)
@@ -284,7 +272,7 @@ ${COMMENT_REPLY_TAG}
     startLine: number,
     endLine: number
   ) {
-    const comments = await this.issue.listReviewComments()
+    const comments = await this.pr.listReviewComments()
     return comments.filter(
       (comment: ReviewComment) =>
         comment.path === path &&
@@ -302,7 +290,7 @@ ${COMMENT_REPLY_TAG}
     startLine: number,
     endLine: number
   ) {
-    const comments = await this.issue.listReviewComments()
+    const comments = await this.pr.listReviewComments()
     return comments.filter(
       (comment: any) =>
         comment.path === path &&
@@ -369,7 +357,7 @@ ${chain}
 
   async getCommentChain(comment: any) {
     try {
-      const reviewComments = await this.issue.listReviewComments()
+      const reviewComments = await this.pr.listReviewComments()
       const topLevelComment = await this.getTopLevelComment(
         reviewComments,
         comment
@@ -409,7 +397,7 @@ ${chain}
   private async create(body: string) {
     try {
       // get commend ID from the response
-      await this.issue.createComment(body)
+      await this.pr.createComment(body)
     } catch (e) {
       warning(`Failed to create comment: ${e}`)
     }
@@ -419,7 +407,7 @@ ${chain}
     try {
       const cmt = await this.findCommentWithTag(tag)
       if (cmt) {
-        await this.issue.updateComment(cmt.id, body)
+        await this.pr.updateComment(cmt.id, body)
       } else {
         await this.create(body)
       }
@@ -430,7 +418,7 @@ ${chain}
 
   async findCommentWithTag(tag: string) {
     try {
-      const comments = await this.issue.listComments()
+      const comments = await this.pr.listComments()
       for (const cmt of comments) {
         if (cmt.body && cmt.body.includes(tag)) {
           return cmt
