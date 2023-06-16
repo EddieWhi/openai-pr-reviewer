@@ -21,7 +21,10 @@
     "globalThis": false
   },
   "rules": {
-    "i18n-text/no-en": "off"
+    "i18n-text/no-en": "off",
+    "camelcase": "off",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["error"]
   },
   "env": {
     "node": true,
