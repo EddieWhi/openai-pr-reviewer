@@ -2,7 +2,6 @@ import {info, warning} from './logger.js'
 
 // eslint-disable-next-line camelcase
 import {ReviewContext} from './review-context.js'
-import {octokit} from './octokit.js'
 import { PullRequest, ReviewComment, ReviewCommentArgs } from './pull-request.js'
 
 

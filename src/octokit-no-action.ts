@@ -22,7 +22,7 @@ export const octokit = new Octokit({
 export interface OctokitNoActionsPullRequestParams {
   owner: string
   repo: string
-  pull_number: number
+  pullNumber: number
 }
 
 export class OctokitNoActionsPullRequest implements PullRequest {
@@ -42,12 +42,12 @@ export class OctokitNoActionsPullRequest implements PullRequest {
         octokit.issues.get({
         owner: params.owner,
         repo: params.repo,
-        issue_number: params.pull_number
+        issue_number: params.pullNumber
       }),
       octokit.pulls.get({
         owner: params.owner,
         repo: params.repo,
-        pull_number: params.pull_number
+        pull_number: params.pullNumber
       })
     ])
 
@@ -65,7 +65,7 @@ export class OctokitNoActionsPullRequest implements PullRequest {
   constructor(params: OctokitNoActionsPullRequestParams & {title: string, body: string, basesha: string, headsha: string}) {
     this.owner = params.owner
     this.repo = params.repo
-    this.number = params.pull_number
+    this.number = params.pullNumber
     this.title = params.title
     this.body = params.body
     this.basesha = params.basesha
